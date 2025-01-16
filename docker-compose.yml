@@ -1,0 +1,14 @@
+services:
+  fire-prediction:
+    build: .
+    volumes:
+     # - ./app/app.py:/app/app.py  # Монтируем локальный файл app.py в контейнер
+      #- ./app/model:/app/model     # Монтируем папку с моделью в контейнер
+     # - ./app/template:/app/template
+      - ./app:/app
+      #- ./fire_map.html:/app/templates/fire_map.html
+    ports:
+      - "8888:5000"  # Прокси порт для доступа к Flask приложению
+    #environment:
+      #- FLASK_ENV=development  # Окружение для разработки
+    command: python /app/app.py    # Запуск приложения

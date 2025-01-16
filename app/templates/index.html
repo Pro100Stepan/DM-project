@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Prediction</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 800px;
+            width: 800px;
+            margin: 0 auto; /* Центрирование карты */
+        }
+    </style>
+</head>
+<body>
+    <h1>Fire Prediction</h1>
+    <form id="predict-form">
+        <label for="latitude">Latitude (широта)[-90;90]:</label>
+        <input type="text" id="latitude" name="latitude" required>
+        <label for="longitude">Longitude (долгота) [0,360]:</label>
+        <input type="text" id="longitude" name="longitude" required>
+        <label for="bright_t31">Brightness T31(Температура (*C)) [-60;60]:</label>
+        <input type="text" id="bright_t31" name="bright_t31" required>
+        <label for="daynight">Day/Night(День/Ночь):</label>
+        <select id="daynight" name="daynight" required>
+            <option value="D">Day(День)</option>
+            <option value="N">Night(Ночь)</option>
+        </select>
+        <button type="submit">Predict(Проститать)</button>
+    </form>
+
+    <div id="map"></div>
+
+    <script>
+        const map = L.map('map').setView([0, 0], 2); // Инициализация карты
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        let markers = []; // Массив для хранения всех маркеров
+        let lastMarker; // Переменная для последнего маркера
+
+        // Функция для определения цвета маркера на основе Confidence
+        function getMarkerColor(confidence, isLastMarker) {
+            if (isLastMarker) return 'blue'; // Последний маркер всегда синий
+            if (confidence < 50) return 'red';
+            if (confidence >= 50 && confidence < 60) return 'orange';
+            if (confidence >= 60 && confidence < 70) return 'lightgreen';
+            if (confidence >= 70) return 'green';
+            return 'gray'; // На случай ошибки
+        }
+
+        document.getElementById('predict-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+            const bright_t31 = parseFloat(document.getElementById('bright_t31').value);
+            const daynight = document.getElementById('daynight').value;
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ latitude, longitude, bright_t31, daynight })
+                });
+                const result = await response.json();
+
+                if (result.error) {
+                    alert(`Error: ${result.error}`);
+                } else {
+                    const { confidence } = result;
+
+                    // Создание нового маркера
+                    const isLastMarker = true; // Текущий маркер будет последним
+                    const markerColor = getMarkerColor(confidence, isLastMarker);
+                    const newMarker = L.marker([latitude, longitude], {
+                        icon: L.icon({
+                            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${markerColor}.png`,
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        })
+                    }).addTo(map);
+
+                    // Добавление Popup и центрирование карты
+                    newMarker.bindPopup(`Confidence: ${confidence}%`).openPopup();
+                    map.setView([latitude, longitude], 10);
+
+                    // Сбрасываем цвет предыдущего маркера
+                    if (lastMarker) {
+                        const lastMarkerIndex = markers.length - 1;
+                        const prevConfidence = markers[lastMarkerIndex].confidence;
+
+                        const prevColor = getMarkerColor(prevConfidence, false);
+                        const oldMarkerIcon = L.icon({
+                            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${prevColor}.png`,
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        });
+
+                        lastMarker.setIcon(oldMarkerIcon);
+                    }
+
+                    // Обновляем последний маркер
+                    lastMarker = newMarker;
+
+                    // Сохраняем маркер в массив
+                    markers.push({ marker: newMarker, confidence });
+                }
+            } catch (error) {
+                alert(`Error: ${error}`);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prediction Result</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Fire Confidence Prediction Result</h1>
+    <p>Latitude: {{ latitude }}</p>
+    <p>Longitude: {{ longitude }}</p>
+    <p>Confidence: {{ confidence }}%</p>
+
+    <h2>Map</h2>
+    <div id="map"></div>
+    <script>
+        function initMap() {
+            var location = {lat: {{ latitude }}, lng: {{ longitude }}};
+            var map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 8,
+                center: location
+            });
+            new google.maps.Marker({
+                position: location,
+                map: map,
+                title: "Fire Confidence: {{ confidence }}%"
+            });
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+mean_absolute_error: 0.1585770564218623
+mean_squared_error: 0.040208545428298936
+rmse: 0.20052068578652663
+https://firms.modaps.eosdis.nasa.gov/download/list.php
